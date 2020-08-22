@@ -7,7 +7,7 @@ from numpy import ndim
 from numpy import newaxis
 from numpy import vstack
 from numpy import zeros
-from scipy.integrate import odeint
+from scipy.integrate import odeint, solve_ivp
 from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator
 from sklearn.exceptions import ConvergenceWarning
@@ -147,6 +147,7 @@ class SINDy(BaseEstimator):
         t_default=1,
         discrete_time=False,
         n_jobs=1,
+        ode_type="odeint",
     ):
         if optimizer is None:
             optimizer = STLSQ()
@@ -166,6 +167,8 @@ class SINDy(BaseEstimator):
         self.feature_names = feature_names
         self.discrete_time = discrete_time
         self.n_jobs = n_jobs
+        self.ode_type = ode_type
+        print("This is custom lib")
 
     def fit(
         self,
@@ -710,8 +713,17 @@ class SINDy(BaseEstimator):
 
                     def rhs(x, t):
                         return self.predict(x[newaxis, :], u(t))[0]
+            if self.ode_type == "solve_ivp":
 
-            return integrator(rhs, x0, t, **integrator_kws)
+                def rhs_solve_ivp(t, x):
+                    return self.predict(x[newaxis, :], u(t))[0]
+                
+                print("tspan = " + str(t[0]) + " " + str(t[-1]))
+                print(x0)
+                return solve_ivp(rhs_solve_ivp, [t[0], t[-1]], x0, t_eval=t, **integrator_kws)
+
+            else:
+                return integrator(rhs, x0, t, **integrator_kws)
 
     @property
     def complexity(self):
